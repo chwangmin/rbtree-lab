@@ -329,11 +329,13 @@ void rbtree_erase_fixup(rbtree *t, node_t *parent_node, bool is_node_left){
     return;
   }
 
-  //exra 블랙에서 가장 가까운 노드
+  //exra 블랙에서 가장 가까운 노드와 먼 노드 지정
   node_t *near = is_node_left? sibling_left_node : sibling_right_node;
   node_t *distant = is_node_left? sibling_right_node : sibling_left_node;
 
-  // Case 3) 노드가 왼쪽 일때
+  // Case 3,4 는 가까이 있는가, 멀리 있는가를 확인한다. 멀리 있는 노드가 빨간색이면 케이스 4 아니면 케이스 3임.
+
+  // Case 3) 노드가 왼쪽 일때, 멀리 있는 노드의 색이 검정이고 가까이 있는 노드의 색이 빨강일 때
   if (is_node_left && near->color==RBTREE_RED && distant->color==RBTREE_BLACK){
     rotate_R(t,near);
     exchange_color(sibling_node,near);
@@ -341,7 +343,7 @@ void rbtree_erase_fixup(rbtree *t, node_t *parent_node, bool is_node_left){
     return;
   }
 
-  // Case 4) 노드가 왼쪽 일 때
+  // Case 4) 노드가 왼쪽 일 때, 멀리 있는 노드의 색이 빨간색일때
   if (is_node_left && distant->color==RBTREE_RED){
     rotate_L(t,sibling_node);
     exchange_color(sibling_node,parent_node);
@@ -349,7 +351,7 @@ void rbtree_erase_fixup(rbtree *t, node_t *parent_node, bool is_node_left){
     return;
   }
 
-  // Case 3) // 노드가 오른쪽일 때
+  // Case 3) 노드가 오른쪽일 때, 멀리 있는 노드의 색이 검정이고 가까이 있는 노드의 색이 빨강일때
   if (near->color==RBTREE_RED && distant->color==RBTREE_BLACK){
     rotate_L(t,near);
     exchange_color(sibling_node, near);
@@ -357,7 +359,7 @@ void rbtree_erase_fixup(rbtree *t, node_t *parent_node, bool is_node_left){
     return;
   }
 
-  // Case 4) // 노드가 오른쪽일 때
+  // Case 4) 노드가 오른쪽일 때
   if (distant->color==RBTREE_RED){
     rotate_R(t,sibling_node);
     exchange_color(sibling_node,parent_node);
@@ -365,22 +367,26 @@ void rbtree_erase_fixup(rbtree *t, node_t *parent_node, bool is_node_left){
     return;
   }
 
-  // Case 2)
+  // Case 2) 형재의 노드가 검정색이고 자식들도 모두 검정색이면 형재의 색을 빨강으로 바꾸고
   sibling_node->color = RBTREE_RED;
 
+  // 부모가 왼쪽인지 확인한다음
   bool is_parent_left = parent_node->parent->left == parent_node;
 
+  // 부모가 root 노드가 아니라면 재귀로 올라감 (부모가 extra 노드가 되니까.)
   if (parent_node != t->root){
     rbtree_erase_fixup(t,parent_node->parent, is_parent_left);
   }
 }
 
+// node1 과 node2의 색을 바꾼다.
 void exchange_color(node_t *node1, node_t *node2){
   int tmp_color = node1->color;
   node1->color = node2->color;
   node2->color = (tmp_color == RBTREE_BLACK) ? RBTREE_BLACK:RBTREE_RED;
 }
 
+// 삭제할 노드를 대체할 후보 노드를 찾는다. (오른쪽 트리에서 가장 작은 값)
 node_t *rbtree_successor_find(const rbtree *t, node_t *node) {
   while (node->left != t->nil){
     node = node->left;
@@ -388,6 +394,7 @@ node_t *rbtree_successor_find(const rbtree *t, node_t *node) {
   return node;
 }
 
+// 트리에 있는 값들을 오름차 순으로 정렬해서 arr 배열에 넣는다.
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
   node_t *node = t->root;
   int idx=0;
@@ -396,6 +403,7 @@ int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
   return 0;
 }
 
+// 중위순회로 재귀를 사용해서 순차적으로 arr에 입력
 void rbtree_inOrder(const rbtree *t, key_t *arr, node_t *node, int *idx){
   if(node->left != t->nil){
     rbtree_inOrder(t,arr,node->left,idx);
